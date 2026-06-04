@@ -1,141 +1,106 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, Dimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../navigation/typesNavigation';
+import { PieChart, BarChart } from 'react-native-chart-kit';
+import { appStyles, COLORS } from '../styles/appStyles';
 import { petService } from '../services/petService';
-import { appStyles } from '../styles/appStyles';
-import { Pet } from '../types/pet'; 
 
-type Props = { navigation: StackNavigationProp<RootStackParamList, 'Stats'> };
+const screenWidth = Dimensions.get('window').width - 64; // Margen considerado
 
-export default function StatsScreen({ navigation }: Props) {
-  const [loading, setLoading] = useState(true);
-  const [allPets, setAllPets] = useState<Pet[]>([]); // Guardamos TODA la base de datos aquí
-  const [filtroActivo, setFiltroActivo] = useState<string | null>(null); // Controla qué lista se muestra
-
+export default function StatsScreen() {
   const [stats, setStats] = useState({
     total: 0,
-    enCalle: 0,
-    rescatadas: 0,
-    fundacion: 0,
-    adoptadas: 0
+    dogs: 0,
+    cats: 0,
+    others: 0,
+    synced: 0,
+    pending: 0
   });
+
+  const loadStats = async () => {
+    const data = await petService.getAllPets();
+    let dogs = 0, cats = 0, others = 0, synced = 0;
+    
+    data.forEach(pet => {
+      const species = pet.species.toLowerCase().trim();
+      if (species.includes('perro')) dogs++;
+      else if (species.includes('gato')) cats++;
+      else others++;
+
+      if (pet.synced) synced++;
+    });
+
+    setStats({
+      total: data.length,
+      dogs,
+      cats,
+      others,
+      synced,
+      pending: data.length - synced
+    });
+  };
 
   useFocusEffect(
     useCallback(() => {
-      let isActive = true;
-
-      const loadStats = async () => {
-        setLoading(true);
-        const data = await petService.getPets();
-        
-        if (isActive) {
-          setAllPets(data); // Almacenamos los datos para poder filtrarlos sin volver a la DB
-          const conteo = {
-            total: data.length,
-            enCalle: data.filter(p => p.estado === 'En la calle').length,
-            rescatadas: data.filter(p => p.estado === 'Rescatada').length,
-            fundacion: data.filter(p => p.estado === 'Recogida por Fundación').length,
-            adoptadas: data.filter(p => p.estado === 'Adoptada').length,
-          };
-          setStats(conteo);
-          setLoading(false);
-        }
-      };
-
       loadStats();
-      return () => { isActive = false; };
     }, [])
   );
 
-  // Filtramos la lista en tiempo real según la tarjeta que toques
-  const mascotasFiltradas = filtroActivo 
-    ? allPets.filter(pet => pet.estado === filtroActivo)
-    : [];
+  const pieData = [
+    { name: 'Perros', population: stats.dogs, color: COLORS.primary, legendFontColor: COLORS.textPrimary, legendFontSize: 14 },
+    { name: 'Gatos', population: stats.cats, color: COLORS.secondary, legendFontColor: COLORS.textPrimary, legendFontSize: 14 },
+    { name: 'Otros', population: stats.others, color: '#F59E0B', legendFontColor: COLORS.textPrimary, legendFontSize: 14 },
+  ];
 
-  if (loading) {
-    return <ActivityIndicator size="large" color="#0EA5E9" style={{ flex: 1, justifyContent: 'center' }} />;
-  }
+  const chartConfig = {
+    backgroundGradientFrom: '#ffffff',
+    backgroundGradientTo: '#ffffff',
+    color: (opacity = 1) => `rgba(79, 70, 229, ${opacity})`,
+    labelColor: (opacity = 1) => COLORS.textPrimary,
+  };
 
   return (
-    <ScrollView style={appStyles.container}>
-      <Text style={appStyles.title}>Estadísticas de Impacto</Text>
-      
-      {/* Tarjeta Total: Al tocarla, limpiamos el filtro y ocultamos la lista */}
-      <TouchableOpacity 
-        style={[appStyles.card, { backgroundColor: '#0EA5E9', alignItems: 'center' }]}
-        onPress={() => setFiltroActivo(null)}
-      >
-        <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>Total de Reportes</Text>
-        <Text style={{ color: 'white', fontSize: 40, fontWeight: 'bold' }}>{stats.total}</Text>
-        <Text style={{ color: 'white', fontSize: 12, marginTop: 5 }}>Toca aquí para ocultar listas</Text>
-      </TouchableOpacity>
-
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-        
-        {/* En la calle */}
-        <TouchableOpacity 
-          style={[appStyles.card, { width: '48%', borderTopWidth: 4, borderTopColor: '#EF4444' }]}
-          onPress={() => setFiltroActivo('En la calle')}
-        >
-          <Text style={appStyles.textSecondary}>En la calle</Text>
-          <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#EF4444' }}>{stats.enCalle}</Text>
-        </TouchableOpacity>
-
-        {/* Rescatadas */}
-        <TouchableOpacity 
-          style={[appStyles.card, { width: '48%', borderTopWidth: 4, borderTopColor: '#10B981' }]}
-          onPress={() => setFiltroActivo('Rescatada')}
-        >
-          <Text style={appStyles.textSecondary}>Rescatadas</Text>
-          <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#10B981' }}>{stats.rescatadas}</Text>
-        </TouchableOpacity>
-
-        {/* En Fundación */}
-        <TouchableOpacity 
-          style={[appStyles.card, { width: '48%', borderTopWidth: 4, borderTopColor: '#F59E0B' }]}
-          onPress={() => setFiltroActivo('Recogida por Fundación')}
-        >
-          <Text style={appStyles.textSecondary}>En Fundación</Text>
-          <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#F59E0B' }}>{stats.fundacion}</Text>
-        </TouchableOpacity>
-
-        {/* Adoptadas */}
-        <TouchableOpacity 
-          style={[appStyles.card, { width: '48%', borderTopWidth: 4, borderTopColor: '#8B5CF6' }]}
-          onPress={() => setFiltroActivo('Adoptada')}
-        >
-          <Text style={appStyles.textSecondary}>Adoptadas</Text>
-          <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#8B5CF6' }}>{stats.adoptadas}</Text>
-        </TouchableOpacity>
-
-      </View>
-
-      {/* --- NUEVA ZONA: LISTADO DINÁMICO --- */}
-      {filtroActivo && (
-        <View style={{ marginTop: 20, paddingBottom: 40 }}>
-          <Text style={[appStyles.title, { fontSize: 18, marginBottom: 15 }]}>
-            Listado: {filtroActivo} ({mascotasFiltradas.length})
-          </Text>
-
-          {mascotasFiltradas.length === 0 ? (
-            <Text style={appStyles.emptyText}>No hay registros en este estado.</Text>
-          ) : (
-            mascotasFiltradas.map((pet) => (
-              <TouchableOpacity 
-                key={pet.id} 
-                style={[appStyles.card, { borderLeftWidth: 4, borderLeftColor: '#0EA5E9' }]}
-                onPress={() => navigation.navigate('Detail', { pet })}
-              >
-                <Text style={appStyles.textPrimary}>{pet.tipo} - {pet.raza}</Text>
-                <Text style={appStyles.textSecondary}>📍 {pet.ubicacion}</Text>
-                <Text style={appStyles.textSecondary}>📅 {pet.fecha}</Text>
-              </TouchableOpacity>
-            ))
-          )}
+    <SafeAreaView style={appStyles.container}>
+      <ScrollView contentContainerStyle={appStyles.content} showsVerticalScrollIndicator={false}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+          <View style={[appStyles.card, { flex: 1, marginRight: 8, alignItems: 'center' }]}>
+            <View style={{ backgroundColor: '#EEF2FF', padding: 12, borderRadius: 16, marginBottom: 8 }}>
+              <Text style={{ fontSize: 24 }}>📈</Text>
+            </View>
+            <Text style={{ fontSize: 32, fontWeight: '800', color: COLORS.primary }}>{stats.total}</Text>
+            <Text style={{ fontSize: 13, color: COLORS.textSecondary, fontWeight: '600' }}>Total Reportes</Text>
+          </View>
+          <View style={[appStyles.card, { flex: 1, marginLeft: 8, alignItems: 'center' }]}>
+            <View style={{ backgroundColor: '#ECFDF5', padding: 12, borderRadius: 16, marginBottom: 8 }}>
+              <Text style={{ fontSize: 24 }}>☁️</Text>
+            </View>
+            <Text style={{ fontSize: 32, fontWeight: '800', color: COLORS.secondary }}>{stats.synced}</Text>
+            <Text style={{ fontSize: 13, color: COLORS.textSecondary, fontWeight: '600' }}>Sincronizados</Text>
+          </View>
         </View>
-      )}
-    </ScrollView>
+
+        <View style={[appStyles.card, { padding: 24 }]}>
+          <Text style={{ fontWeight: '800', fontSize: 18, marginBottom: 20, color: COLORS.textPrimary }}>Distribución por Especie</Text>
+          <PieChart
+            data={pieData}
+            width={screenWidth}
+            height={220}
+            chartConfig={chartConfig}
+            accessor={"population"}
+            backgroundColor={"transparent"}
+            paddingLeft={"15"}
+            absolute
+          />
+        </View>
+
+        <View style={[appStyles.card, { marginTop: 10, padding: 20, backgroundColor: COLORS.primary }]}>
+          <Text style={{ color: COLORS.white, fontSize: 18, fontWeight: '800', marginBottom: 8 }}>Resumen de Actividad</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 14, lineHeight: 22 }}>
+            Has contribuido a identificar a {stats.total} mascotas. ¡Tu ayuda es fundamental para mejorar las estadísticas de bienestar animal en tu ciudad!
+          </Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

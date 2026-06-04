@@ -1,104 +1,182 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, Image, ScrollView, TextInput } from 'react-native';
-import { RouteProp } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../navigation/typesNavigation';
+import React, { useState, useCallback } from 'react';
+import { View, Text, Image, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRoute, RouteProp, useNavigation, useFocusEffect } from '@react-navigation/native';
+import { RootStackParamList, NavigationProps } from '../navigation/typesNavigation';
+import { appStyles, COLORS } from '../styles/appStyles';
 import { petService } from '../services/petService';
-import { appStyles } from '../styles/appStyles';
+import { syncService } from '../services/syncService';
+import { PetReport } from '../types/pet';
 
-type DetailRouteProp = RouteProp<RootStackParamList, 'Detail'>;
-type Props = { route: DetailRouteProp; navigation: StackNavigationProp<RootStackParamList, 'Detail'>; };
+type DetailScreenRouteProp = RouteProp<RootStackParamList, 'Detail'>;
 
-export default function DetailScreen({ route, navigation }: Props) {
-  const { pet } = route.params;
-  const [estadoActual, setEstadoActual] = useState(pet.estado);
-  const [infoExtra, setInfoExtra] = useState(pet.observaciones || '');  
+export default function DetailScreen() {
+  const route = useRoute<DetailScreenRouteProp>();
+  const navigation = useNavigation<NavigationProps>();
+  const { petId } = route.params;
 
-  const handleActualizarEstado = async (nuevoEstado: string) => {
-     
-    if (infoExtra.trim().length < 5) {
-      Alert.alert("Información requerida", "Por favor ingresa detalles sobre el cambio (quién lo lleva, qué fundación, etc.)");
-      return;
-    }
+  const [pet, setPet] = useState<PetReport | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
+  const loadPetData = async () => {
+    setLoading(true);
     try {
-       
-      await petService.updatePetStatus(pet.id!, nuevoEstado, infoExtra);
-      setEstadoActual(nuevoEstado);
-      Alert.alert("Actualizado", `Mascota marcada como: ${nuevoEstado}`);
+      const data = await petService.getPetById(petId);
+      setPet(data);
+    } catch (error) {
+      console.error("Error al cargar detalles:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      await syncService.syncLocalToCloud();
+      await loadPetData();
+      Alert.alert("Éxito", "Los datos se han sincronizado con Firebase.");
+    } catch (error) {
+      Alert.alert("Error", "No se pudo sincronizar. Verifica tu conexión.");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const updateStatus = async (newStatus: string) => {
+    try {
+      await petService.updateStatus(petId, newStatus);
+      await loadPetData();
+      Alert.alert("Actualizado", `El estado ha cambiado a: ${newStatus}`);
     } catch (error) {
       Alert.alert("Error", "No se pudo actualizar el estado.");
     }
   };
 
-  const handleEliminar = async () => {
-    try {
-      await petService.deletePet(pet.id!);
-      Alert.alert("Eliminado", "El reporte ha sido borrado.");
-      navigation.goBack();
-    } catch (error) {
-      Alert.alert("Error", "No se pudo eliminar el reporte.");
-    }
-  };
+  useFocusEffect(
+    useCallback(() => {
+      loadPetData();
+    }, [petId])
+  );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[appStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!pet) {
+    return (
+      <SafeAreaView style={[appStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: COLORS.textSecondary }}>No se encontró el reporte.</Text>
+        <TouchableOpacity style={appStyles.buttonPrimary} onPress={() => navigation.goBack()}>
+          <Text style={appStyles.buttonText}>Volver</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <ScrollView 
-      style={appStyles.container} 
-      keyboardShouldPersistTaps="handled" 
-    >
-      <View style={appStyles.card}>
-        {pet.foto && pet.foto !== 'sin_foto' ? (
-          <Image source={{ uri: pet.foto }} style={{ width: '100%', height: 250, borderRadius: 8, marginBottom: 15 }} />
-        ) : null}
-        
-        <Text style={appStyles.title}>{pet.tipo} ({pet.raza})</Text>
-        <Text style={appStyles.textSecondary}>📍 Ubicación: {pet.ubicacion}</Text>
-        <Text style={appStyles.textSecondary}>📅 Reportado: {pet.fecha}</Text>
-        <Text style={[appStyles.textSecondary, { marginTop: 15, fontSize: 16, fontWeight: 'bold' }]}>
-          Estado actual: <Text style={appStyles.statusBadge}>{estadoActual}</Text>
-        </Text>
+    <SafeAreaView style={appStyles.container}>
+      <ScrollView contentContainerStyle={appStyles.content} showsVerticalScrollIndicator={false}>
+        <View style={[appStyles.card, { padding: 12 }]}>
+          {pet.imageUrl ? (
+            <Image source={{ uri: pet.imageUrl }} style={{ width: '100%', height: 300, borderRadius: 20, marginBottom: 16 }} />
+          ) : (
+            <View style={{ width: '100%', height: 250, backgroundColor: '#E2E8F0', borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={{ color: COLORS.textSecondary }}>Sin imagen disponible</Text>
+            </View>
+          )}
 
-        {pet.observaciones || infoExtra ? (
-          <Text style={[appStyles.textSecondary, { fontStyle: 'italic', marginTop: 10, color: '#4B5563' }]}>
-            📝 Notas: {infoExtra || pet.observaciones}
-          </Text>
-        ) : null}
-      </View>
+          <View style={{ padding: 8 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ fontSize: 24, fontWeight: '900', color: COLORS.textPrimary }}>
+                {pet.species} - {pet.breed}
+              </Text>
+              <View style={{ 
+                paddingHorizontal: 12, paddingVertical: 6, 
+                backgroundColor: pet.status === 'Rescatado' ? '#D1FAE5' : '#FEF3C7',
+                borderRadius: 10
+              }}>
+                <Text style={{ 
+                  color: pet.status === 'Rescatado' ? '#059669' : '#D97706', 
+                  fontWeight: '800', fontSize: 11
+                }}>
+                  {pet.status.toUpperCase()}
+                </Text>
+              </View>
+            </View>
 
-      <View style={{ marginTop: 10, marginBottom: 40 }}>
-        <Text style={[appStyles.textSecondary, { marginBottom: 10, textAlign: 'center' }]}>Cambiar estado de la mascota:</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+              <TouchableOpacity 
+                style={[appStyles.buttonPrimary, { flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: COLORS.secondary }]}
+                onPress={() => updateStatus('Rescatado')}
+              >
+                <Text style={{ color: COLORS.white, fontWeight: '800', fontSize: 12 }}>MARCAR RESCATADO</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[appStyles.buttonPrimary, { flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: COLORS.accent }]}
+                onPress={() => updateStatus('Reportado')}
+              >
+                <Text style={{ color: COLORS.white, fontWeight: '800', fontSize: 12 }}>MARCAR PENDIENTE</Text>
+              </TouchableOpacity>
+            </View>
 
-       
-        <Text style={[appStyles.textSecondary, { marginBottom: 5 }]}>Información de seguimiento:</Text>
-        <TextInput
-          style={[appStyles.input, { height: 80, textAlignVertical: 'top' }]}
-          placeholder="Ej: Llevado por Juan Pérez a Fundación 'Huellitas'"
-          multiline
-          value={infoExtra}
-          onChangeText={setInfoExtra}
-        />
+            <Text style={{ fontSize: 14, color: COLORS.textSecondary, marginBottom: 20 }}>
+              📅 Reportado el {new Date(pet.createdAt).toLocaleDateString()}
+            </Text>
 
-        {estadoActual === 'En la calle' && (
-          <>
-            <TouchableOpacity style={appStyles.buttonSuccess} onPress={() => handleActualizarEstado('Rescatada')}>
-              <Text style={appStyles.buttonText}>🏠 Marcar como Rescatada</Text>
+            <View style={{ marginBottom: 20 }}>
+              <Text style={{ fontWeight: '800', fontSize: 17, color: COLORS.textPrimary, marginBottom: 6 }}>Estado Físico (IA)</Text>
+              <View style={{ backgroundColor: '#F8FAFC', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#EDF2F7' }}>
+                <Text style={{ fontSize: 16, color: COLORS.textSecondary, lineHeight: 26 }}>
+                  {pet.physicalState}
+                </Text>
+              </View>
+            </View>
+
+            <View style={{ marginBottom: 24 }}>
+              <Text style={{ fontWeight: '800', fontSize: 17, color: COLORS.textPrimary, marginBottom: 6 }}>Ubicación</Text>
+              <Text style={{ fontSize: 16, color: COLORS.textSecondary, lineHeight: 24 }}>
+                📍 {pet.address}
+              </Text>
+            </View>
+
+            <View style={{ padding: 16, backgroundColor: pet.synced ? '#F0FDF4' : '#FFF1F2', borderRadius: 14, borderWidth: 1, borderColor: pet.synced ? '#DCFCE7' : '#FFE4E6', marginBottom: 20 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                <View style={{ 
+                  width: 12, height: 12, borderRadius: 6, 
+                  backgroundColor: pet.synced ? COLORS.secondary : COLORS.danger,
+                  marginRight: 10
+                }} />
+                <Text style={{ fontSize: 14, fontWeight: '700', color: COLORS.textPrimary }}>
+                  {pet.synced ? 'Sincronizado con Firebase' : 'Modo Offline (Solo Local)'}
+                </Text>
+              </View>
+              
+              {!pet.synced && (
+                <TouchableOpacity 
+                  style={{ backgroundColor: COLORS.primary, padding: 10, borderRadius: 10, alignItems: 'center' }}
+                  onPress={handleSync}
+                  disabled={syncing}
+                >
+                  {syncing ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontWeight: '800' }}>☁️ SINCRONIZAR AHORA</Text>}
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <TouchableOpacity 
+              style={[appStyles.buttonSecondary, { marginTop: 10 }]}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={appStyles.buttonTextSecondary}>Volver a la lista</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[appStyles.buttonPrimary, { backgroundColor: '#F59E0B' }]} onPress={() => handleActualizarEstado('Recogida por Fundación')}>
-              <Text style={appStyles.buttonText}>🏢 Recogida por Fundación</Text>
-            </TouchableOpacity>
-          </>
-        )}
-
-        {(estadoActual === 'Rescatada' || estadoActual === 'Recogida por Fundación') && (
-          <TouchableOpacity style={[appStyles.buttonPrimary, { backgroundColor: '#8B5CF6' }]} onPress={() => handleActualizarEstado('Adoptada')}>
-            <Text style={appStyles.buttonText}>❤️ Marcar como Adoptada</Text>
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity style={[appStyles.buttonDanger, { marginTop: 30 }]} onPress={handleEliminar}>
-          <Text style={appStyles.buttonText}>🗑️ Eliminar Reporte</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

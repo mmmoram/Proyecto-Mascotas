@@ -1,9 +1,14 @@
-import { Pet } from '../types/pet';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 export type RootStackParamList = {
-  Home: undefined; 
-  List: undefined;
+  Login: undefined;
+  Home: undefined;
   Form: undefined;
-  Detail: { pet: Pet };
+  List: undefined;
   Stats: undefined;
+  Detail: { petId: number };
+  Profile: undefined;
+  Shelters: { city: string };
 };
+
+export type NavigationProps = NativeStackNavigationProp<RootStackParamList>;

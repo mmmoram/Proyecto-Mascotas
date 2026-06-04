@@ -1,24 +1,119 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
+
+const { width } = Dimensions.get('window');
+
+export const COLORS = {
+  background: '#F8FAFC',
+  primary: '#6366F1', // Indigo modern
+  primaryLight: '#EEF2FF',
+  secondary: '#10B981', // Emerald
+  secondaryLight: '#ECFDF5',
+  accent: '#F59E0B', // Amber
+  textPrimary: '#0F172A',
+  textSecondary: '#64748B',
+  white: '#FFFFFF',
+  danger: '#EF4444',
+  border: '#E2E8F0',
+  cardShadow: 'rgba(0, 0, 0, 0.1)',
+};
 
 export const appStyles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#F3F4F6' },
-  card: { backgroundColor: '#FFFFFF', padding: 16, borderRadius: 8, marginBottom: 12, elevation: 3 },
-  title: { fontSize: 20, fontWeight: 'bold', color: '#1F2937', marginBottom: 16 },
-  
-  // Forzamos el color negro para evitar que se ponga blanco en Modo Oscuro
-  textPrimary: { fontSize: 16, fontWeight: 'bold', color: '#000000' },
-  textSecondary: { fontSize: 14, color: '#333333', marginTop: 4 },
-  
-  statusBadge: { color: '#EF4444', fontWeight: 'bold' },
-  input: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 6, padding: 12, marginBottom: 12, color: '#000000' },
-  
-  // Botones
-  buttonPrimary: { backgroundColor: '#0EA5E9', padding: 15, borderRadius: 6, alignItems: 'center', marginVertical: 8 },
-  buttonSuccess: { backgroundColor: '#10B981', padding: 15, borderRadius: 6, alignItems: 'center', marginVertical: 8 },
-  
-  // ¡Aquí está el estilo que faltaba para el botón de eliminar!
-  buttonDanger: { backgroundColor: '#EF4444', padding: 15, borderRadius: 6, alignItems: 'center', marginVertical: 8 },
-  
-  buttonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 16, textAlign: 'center' },
-  emptyText: { textAlign: 'center', marginTop: 30, color: '#6B7280', fontSize: 16 }
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  content: {
+    padding: 24,
+  },
+  card: {
+    backgroundColor: COLORS.white,
+    borderRadius: 32,
+    padding: 24,
+    marginVertical: 12,
+    shadowColor: COLORS.textPrimary,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+  title: {
+    fontSize: 34,
+    fontWeight: '900',
+    color: COLORS.textPrimary,
+    letterSpacing: -1,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    lineHeight: 26,
+    fontWeight: '500',
+  },
+  buttonPrimary: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 24,
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.25,
+    shadowRadius: 15,
+    elevation: 8,
+  },
+  buttonSecondary: {
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    paddingVertical: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    marginTop: 16,
+  },
+  buttonText: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  buttonTextSecondary: {
+    color: COLORS.primary,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  input: {
+    backgroundColor: COLORS.white,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    padding: 20,
+    fontSize: 16,
+    color: COLORS.textPrimary,
+    marginBottom: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 12,
+    backgroundColor: COLORS.background,
+  },
+  backButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: COLORS.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  }
 });

@@ -1,112 +1,172 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../navigation/typesNavigation';
-import { petService } from '../services/petService';
-import { initDatabase } from '../database/database';
-import { appStyles } from '../styles/appStyles';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, StatusBar, Image, ScrollView, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NavigationProps } from '../navigation/typesNavigation';
+import { appStyles, COLORS } from '../styles/appStyles';
+import * as Location from 'expo-location';
 
-type Props = { navigation: StackNavigationProp<RootStackParamList, 'Home'> };
+export default function HomeScreen() {
+  const navigation = useNavigation<NavigationProps>();
+  const [currentCity, setCurrentCity] = useState<string>('Cuenca');
+  const [activePet, setActivePet] = useState<'dog' | 'cat'>('dog');
 
-export default function HomeScreen({ navigation }: Props) {
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ total: 0, enCalle: 0, rescatadas: 0, fundacion: 0, adoptadas: 0 });
-
-useFocusEffect(
-    useCallback(() => {
-      let isActive = true;
-      const loadStats = async () => {
-        setLoading(true);
-        
-        await initDatabase(); 
-        
-        const data = await petService.getPets();
-        if (isActive) {
-          setStats({
-            total: data.length,
-            enCalle: data.filter(p => p.estado === 'En la calle').length,
-            rescatadas: data.filter(p => p.estado === 'Rescatada').length,
-            fundacion: data.filter(p => p.estado === 'Recogida por Fundación').length,
-            adoptadas: data.filter(p => p.estado === 'Adoptada').length,
-          });
-          setLoading(false);
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      
+      try {
+        let location = await Location.getCurrentPositionAsync({});
+        let geocode = await Location.reverseGeocodeAsync({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude
+        });
+        if (geocode.length > 0 && geocode[0].city) {
+          setCurrentCity(geocode[0].city);
         }
-      };
-      loadStats();
-      return () => { isActive = false; };
-    }, [])
-  );
+      } catch (error) {
+        console.log("Usando ciudad por defecto.");
+      }
+    })();
+  }, []);
 
   return (
-    <ScrollView style={appStyles.container}>
+    <SafeAreaView style={appStyles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F1F5F9" />
       
-      {/* 1. Cabecera, Avatar y Texto */}
-      <View style={{ alignItems: 'center', marginTop: 20, marginBottom: 25 }}>
+      {/* Fondo mejorado con formas decorativas */}
+      <View style={styles.bgDecor1} />
+      <View style={styles.bgDecor2} />
       
-        <Image
-          source={{ uri: 'https://images.unsplash.com/photo-1543852786-1cf6624b9987?q=80&w=400&auto=format&fit=crop' }}
-          style={{ width: 140, height: 140, borderRadius: 70, marginBottom: 15, borderWidth: 3, borderColor: '#0EA5E9' }}
-        />
-        
-        <Text style={[appStyles.title, { textAlign: 'center', fontSize: 26, color: '#1F2937' }]}>
-          Red de Rescate Animal
-        </Text>
-        
-        <Text style={[appStyles.textSecondary, { textAlign: 'center', paddingHorizontal: 10, marginTop: 8, lineHeight: 22, fontSize: 15 }]}>
-          Esta herramienta solidaria permite a la comunidad de Quito reportar mascotas en situación de abandono. Juntos podemos facilitar su rescate, organizar a las fundaciones y darles una segunda oportunidad!
-        </Text>
-      </View>
-
-      {/* BotónPrincipal */}
-      <TouchableOpacity
-        style={[appStyles.buttonPrimary, { backgroundColor: '#6366F1', paddingVertical: 18, marginBottom: 35, elevation: 4 }]}
-        onPress={() => navigation.navigate('List')}
-      >
-        <Text style={[appStyles.buttonText, { fontSize: 18 }]}>🐶🐱Módulo de Reportes</Text>
-      </TouchableOpacity>
-
-    
-      <View style={{ paddingBottom: 30 }}>
-        <Text style={[appStyles.title, { fontSize: 18, marginBottom: 15 }]}>Impacto Actual</Text>
-        
-        {loading ? (
-          <ActivityIndicator size="large" color="#0EA5E9" />
-        ) : (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-            
-            <View style={[appStyles.card, { width: '100%', backgroundColor: '#0EA5E9', alignItems: 'center' }]}>
-              <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>Total de Registros</Text>
-              <Text style={{ color: 'white', fontSize: 36, fontWeight: 'bold' }}>{stats.total}</Text>
-            </View>
-
-            <View style={[appStyles.card, { width: '48%', borderTopWidth: 4, borderTopColor: '#EF4444', padding: 12 }]}>
-              <Text style={appStyles.textSecondary}>En la calle</Text>
-              <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#EF4444' }}>{stats.enCalle}</Text>
-            </View>
-
-            <View style={[appStyles.card, { width: '48%', borderTopWidth: 4, borderTopColor: '#10B981', padding: 12 }]}>
-              <Text style={appStyles.textSecondary}>Rescatadas</Text>
-              <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#10B981' }}>{stats.rescatadas}</Text>
-            </View>
-
-            <View style={[appStyles.card, 
-              { 
-                width: '48%', 
-                borderTopWidth: 4, 
-                borderTopColor: '#F59E0B', padding: 12 }]}>
-              <Text style={appStyles.textSecondary}>En Fundación</Text>
-              <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#F59E0B' }}>{stats.fundacion}</Text>
-            </View>
-
-            <View style={[appStyles.card, { width: '48%', borderTopWidth: 4, borderTopColor: '#8B5CF6', padding: 12 }]}>
-              <Text style={appStyles.textSecondary}>Adoptadas</Text>
-              <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#8B5CF6' }}>{stats.adoptadas}</Text>
-            </View>
-            
+      <ScrollView contentContainerStyle={appStyles.content} showsVerticalScrollIndicator={false}>
+        <View style={{ marginBottom: 32, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View>
+            <Text style={[appStyles.title, { fontSize: 40 }]}>Salvando Huellas</Text>
+            <Text style={[appStyles.subtitle, { color: COLORS.primary, fontWeight: '700' }]}>
+              📍 {currentCity}
+            </Text>
           </View>
-        )}
-      </View>
-    </ScrollView>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('Profile')}
+            style={{ 
+              width: 60, height: 60, borderRadius: 20, backgroundColor: COLORS.white, 
+              justifyContent: 'center', alignItems: 'center', elevation: 8, 
+              shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10 
+            }}
+          >
+            <Text style={{ fontSize: 30 }}>🐕</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={[appStyles.card, { alignItems: 'center', paddingVertical: 32, borderBottomWidth: 4, borderBottomColor: COLORS.primary, overflow: 'hidden' }]}>
+          <TouchableOpacity 
+            activeOpacity={0.8}
+            onPress={() => setActivePet(activePet === 'dog' ? 'cat' : 'dog')}
+            style={styles.interactiveImageContainer}
+          >
+            <Image 
+              source={{ 
+                uri: activePet === 'dog' 
+                  ? 'https://img.freepik.com/vector-premium/perro-gato-estilo-geometrico-lineas_53876-115856.jpg'
+                  : 'https://img.freepik.com/vector-premium/logo-animal-mascotas-perro-gato-geometrico_649646-1050.jpg'
+              }} 
+              style={{ width: 180, height: 180, borderRadius: 90 }}
+              resizeMode="contain"
+            />
+            <View style={styles.tapBadge}>
+              <Text style={{ fontSize: 10, color: COLORS.white, fontWeight: '900' }}>TOCA PARA CAMBIAR</Text>
+            </View>
+          </TouchableOpacity>
+          
+          <Text style={[appStyles.subtitle, { textAlign: 'center', marginBottom: 32, paddingHorizontal: 10, fontSize: 18, color: COLORS.textPrimary, fontWeight: '600' }]}>
+            ¿Encontraste una mascota? {"\n"}Ayúdanos a encontrar un hogar.
+          </Text>
+
+          <View style={{ width: '100%', gap: 12 }}>
+            <TouchableOpacity 
+              style={appStyles.buttonPrimary}
+              onPress={() => navigation.navigate('Form')}
+            >
+              <Text style={appStyles.buttonText}>📢 Reportar Mascota</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[appStyles.buttonSecondary, { marginTop: 0 }]}
+              onPress={() => navigation.navigate('List')}
+            >
+              <Text style={appStyles.buttonTextSecondary}>🔍 Ver Rescates</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, gap: 16 }}>
+          <TouchableOpacity 
+            style={[appStyles.card, { flex: 1, marginVertical: 0, alignItems: 'center', padding: 20 }]}
+            onPress={() => navigation.navigate('Stats')}
+          >
+            <View style={{ backgroundColor: COLORS.primaryLight, padding: 16, borderRadius: 24, marginBottom: 12 }}>
+              <Text style={{ fontSize: 28 }}>📊</Text>
+            </View>
+            <Text style={{ fontWeight: '800', color: COLORS.textPrimary, fontSize: 15 }}>Estadísticas</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[appStyles.card, { flex: 1, marginVertical: 0, alignItems: 'center', padding: 20 }]}
+            onPress={() => navigation.navigate('Shelters', { city: currentCity })}
+          >
+            <View style={{ backgroundColor: COLORS.secondaryLight, padding: 16, borderRadius: 24, marginBottom: 12 }}>
+              <Text style={{ fontSize: 28 }}>🏥</Text>
+            </View>
+            <Text style={{ fontWeight: '800', color: COLORS.textPrimary, fontSize: 15 }}>Refugios</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  bgDecor1: {
+    position: 'absolute',
+    top: -50,
+    right: -50,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: COLORS.primaryLight,
+    opacity: 0.5,
+    zIndex: -1,
+  },
+  bgDecor2: {
+    position: 'absolute',
+    bottom: 100,
+    left: -80,
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: COLORS.secondaryLight,
+    opacity: 0.3,
+    zIndex: -1,
+  },
+  interactiveImageContainer: {
+    width: 220,
+    height: 220,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 110,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 30,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    borderStyle: 'dashed',
+  },
+  tapBadge: {
+    position: 'absolute',
+    bottom: -5,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  }
+});
