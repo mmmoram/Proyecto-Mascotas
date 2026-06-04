@@ -28,7 +28,7 @@ export const StackNavigator = () => {
       }}
     >
       <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Huellas a Salvo' }} />
+      <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Salvando Huellas' }} />
       <Stack.Screen name="Form" component={FormScreen} options={{ title: 'Reportar Mascota' }} />
       <Stack.Screen name="List" component={ListScreen} options={{ title: 'Mascotas Rescatadas' }} />
       <Stack.Screen name="Stats" component={StatsScreen} options={{ title: 'Estadísticas' }} />
