@@ -1,10 +1,21 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  Image, 
+  ActivityIndicator, 
+  Alert, 
+  ImageBackground, 
+  Dimensions 
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NavigationProps } from '../navigation/typesNavigation';
 import { appStyles, COLORS } from '../styles/appStyles';
-// import { getAuth, GoogleAuthProvider, signInWithCredential } from 'firebase/auth'; // Descomentar para Auth real
+
+const { width, height } = Dimensions.get('window');
+const fondoLogin = require('../../assets/imagen_login.png');
 
 export default function LoginScreen() {
   const navigation = useNavigation<NavigationProps>();
@@ -28,65 +39,104 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={[appStyles.container, { backgroundColor: COLORS.white }]}>
-      <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 32 }}>
-        <View style={{ alignItems: 'center', marginBottom: 60 }}>
+    <ImageBackground
+      source={fondoLogin}
+      style={{ flex: 1, width: width, height: height }}
+      resizeMode="cover"
+    >
+      {/* Capa semitransparente para mejor legibilidad de los botones */}
+      <View style={{
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+      }}>
+        <SafeAreaView style={{ flex: 1 }}>
           <View style={{ 
-            width: 200, height: 200, backgroundColor: COLORS.primaryLight, 
-            borderRadius: 100, justifyContent: 'center', alignItems: 'center',
-            shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.15, shadowRadius: 30, elevation: 10,
+            flex: 1, 
+            justifyContent: 'center',  // Centra los botones verticalmente
+            paddingHorizontal: 32,
           }}>
-            <Image 
-              source={{ uri: 'https://img.freepik.com/vector-premium/logo-animal-mascotas-perro-gato-geometrico_649646-1050.jpg' }} 
-              style={{ width: 160, height: 160, borderRadius: 80 }}
-              resizeMode="contain"
-            />
-          </View>
-          <Text style={[appStyles.title, { marginTop: 40, textAlign: 'center' }]}>
-            Huellas a Salvo
-          </Text>
-          <Text style={[appStyles.subtitle, { marginTop: 16, textAlign: 'center', paddingHorizontal: 20 }]}>
-            La red colaborativa de rescate animal más grande y moderna.
-          </Text>
-        </View>
+            
+            {/* Solo botones en el centro - SIN TÍTULO NI SUBTÍTULO */}
+            <View style={{ gap: 14 }}>
+              
+              {/* Botón Google */}
+              <TouchableOpacity 
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  paddingVertical: 16,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  gap: 12,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 8,
+                  elevation: 5,
+                }}
+                onPress={handleGoogleLogin}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color={COLORS.primary} />
+                ) : (
+                  <>
+                    <Image 
+                      source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2991/2991148.png' }} 
+                      style={{ width: 22, height: 22 }}
+                    />
+                    <Text style={{
+                      color: '#333333',
+                      fontSize: 16,
+                      fontWeight: '600',
+                    }}>
+                      Continuar con Google
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
 
-        <View style={{ gap: 16 }}>
-          <TouchableOpacity 
-            style={appStyles.buttonPrimary}
-            onPress={handleGoogleLogin}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color={COLORS.white} />
-            ) : (
-              <>
-                <Image 
-                  source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2991/2991148.png' }} 
-                  style={{ width: 24, height: 24 }}
-                />
-                <Text style={appStyles.buttonText}>
-                  Continuar con Google
+              {/* Botón Invitado */}
+              <TouchableOpacity 
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  paddingVertical: 16,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255, 255, 255, 0.5)',
+                }}
+                onPress={handleGuestLogin}
+              >
+                <Text style={{
+                  color: '#FFFFFF',
+                  fontSize: 16,
+                  fontWeight: '600',
+                }}>
+                  Entrar como invitado
                 </Text>
-              </>
-            )}
-          </TouchableOpacity>
+              </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={appStyles.buttonSecondary}
-            onPress={handleGuestLogin}
-          >
-            <Text style={appStyles.buttonTextSecondary}>
-              Entrar como invitado
-            </Text>
-          </TouchableOpacity>
-        </View>
+              {/* Enlace ayuda */}
+              <TouchableOpacity style={{ marginTop: 20, alignItems: 'center' }}>
+                <Text style={{ 
+                  textAlign: 'center', 
+                  color: 'rgba(255, 255, 255, 0.8)', 
+                  fontSize: 14, 
+                  fontWeight: '500',
+                }}>
+                  ¿Necesitas ayuda?{' '}
+                  <Text style={{ color: '#FFB347', fontWeight: '600' }}>
+                    Contáctanos
+                  </Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-        <TouchableOpacity style={{ marginTop: 40 }}>
-          <Text style={{ textAlign: 'center', color: COLORS.textSecondary, fontSize: 14, fontWeight: '600' }}>
-            ¿Necesitas ayuda? <Text style={{ color: COLORS.primary }}>Contáctanos</Text>
-          </Text>
-        </TouchableOpacity>
+          </View>
+        </SafeAreaView>
       </View>
-    </SafeAreaView>
+    </ImageBackground>
   );
 }
